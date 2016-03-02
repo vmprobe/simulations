@@ -8,17 +8,18 @@
     (example `35/6a/192b7913b04c54574d18c28d46e6395428ab`)
 
 * 2 file servers (r3.xlarge, $0.333/h):
-  * each with 30.5gb of memory
+  * each with 30.5gb of memory, so can cache about 3_000 files
+  * mounting NAS over NFS
+  * serving mounted dir via nginx
 
-* load balancer (c4.large, $0.105/h):
+* load balancer (m4.xlarge, $0.239/h):
   * simple nginx proxy
+  * configured to send all traffic to file server 1 unless it dies, then fails over to file server 2
 
 * 4? clients (m4.large, $0.12/h):
   * hammering load balancer
   * zipf exponent: 1.1?
 
+## Notes
 
-
-## Misc
-
-http://www.migrate2cloud.com/blog/how-to-setup-nfs-server-on-aws-ec2/
+https://www.nngroup.com/articles/zipf-curves-and-website-popularity/
