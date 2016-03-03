@@ -23,7 +23,16 @@ open(my $log_fh, '>>', 'output.log') || die "couldn't append to output.log: $!";
 my $zipf = Math::Random::Zipf->new($num, $exponent);
 
 
-my $timer = AE::timer 0, 1/$freq, \&issue_request;
+my $timer;
+
+sub start_timer {
+    $timer = AE::timer rand(2/$freq), 0, sub {
+        issue_request();
+        start_timer();
+    };
+}
+
+start_timer();
 
 AE::cv->recv;
 
