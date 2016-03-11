@@ -58,8 +58,8 @@ sub issue_request {
         my $err = shift->recv;
         warn "curl failed ($err)\n" if $err;
 
-        my $end_time = Time::HiRes::time();
+        my $duration = Time::HiRes::time() - $start_time;
 
-        print $log_fh "$i $start_time $end_time $data\n";
+        print $log_fh "$start_time,$duration,$i,$data\n";
     });
 }
