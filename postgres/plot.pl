@@ -4,9 +4,9 @@ use File::Temp qw/tempdir/;
 use Date::Parse;
 use Time::Piece;
 
-my $data_dir = shift || die "need data dir";
-my $img_file = shift || die "need img output file base";
+my $query_num = shift || die "need query num";
 
+my $data_dir = "data$query_num";
 my $temp_dir = tempdir(CLEANUP => $ENV{CLEANUP} // 1);
 say "tempdir: $temp_dir";
 
@@ -24,6 +24,9 @@ my $log = {};
 
 
 my $ymd = Time::Piece::gmtime($log->{'cold start'})->ymd;
+
+
+say "$data_dir," . ($log->{'cold end'} - $log->{'cold start'}) . "," . ($log->{'preload end'} - $log->{'preload start'}) . "," . ($log->{'hot end'} - $log->{'preload end'});
 
 
 my $xrange = $log->{'cold end'} - $log->{'cold start'};
@@ -107,14 +110,19 @@ foreach my $graph (qw( breads rtps )) {
 my $title = $graph eq 'breads' ? 'Block read rate (blocks / s)'
                                : 'Read IOP rate (IOP / s)';
 
-my $yrange = $graph eq 'breads' ? 350_000 :
-                                  5_000;
+my $yrange = $graph eq 'breads' ? 350_000
+                                : 5_000;
+
+my $colour = $graph eq 'breads' ? '#0060ad'
+                                : '#1d6000';
 
 my $script = <<END;
-set terminal svg size 1024,1000 enhanced font 'Arial,20'
-set output '${img_file}_$graph.svg'
+###############
 
-set title "Postgres (from cold cache)"
+set terminal svg size 1024,1000 enhanced font 'Arial,20'
+set output 'query${query_num}_$graph.svg'
+
+set title "Postgres (query $query_num; cold cache)"
 set format y "%.0s%c"
 
 set xlabel "Time (s)"
@@ -124,7 +132,7 @@ set key off
 
 set datafile separator ','
 
-set style line 1 lc rgb '#0060ad' lt 1 lw 2 pt 7 ps 0.3
+set style line 1 lc rgb '$colour' lt 1 lw 2 pt 7 ps 0.3
 
 set xrange [0:$xrange]
 set yrange [0:$yrange]
@@ -136,11 +144,13 @@ set origin 0.0,0.5
 plot '$temp_dir/${graph}_a' with points ls 1
 
 
-set title "Vmprobe+Postgres (from cold cache)"
+set title "Vmprobe+Postgres (query $query_num; cold cache)"
 
 set origin 0.0,0.0
 set arrow from $switchover,$yrange to $switchover,0.00 lc rgb 'red' nohead
 plot '$temp_dir/${graph}_b' with points ls 1
+
+###############
 END
 
 
@@ -153,32 +163,3 @@ END
 system("gnuplot $temp_dir/script");
 
 }
-
-
-
-
-
-
-__END__
-
-set terminal svg size 1024,500 enhanced font 'Arial,20'
-set output 'img/failovergood.svg'
-
-#set title "Fail-over with vmprobe"
-set ylabel "Request latency (s)"
-set xlabel "Time (s)"
-
-set key off
-
-set datafile separator ','
-
-set style line 1 lc rgb '#0060ad' lt 1 lw 2 pt 7 ps 0.3
-
-set xrange [0:450]
-set yrange [0:0.25]
-
-offset = 106
-failover = 312.857229948044
-
-set arrow from (failover - offset),-0.025 to (failover - offset),0.00 lc rgb 'red' lw 5
-plot 'total.log' u ($1 - offset):($2) with points ls 1
